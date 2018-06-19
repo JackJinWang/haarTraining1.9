@@ -1239,7 +1239,8 @@ static int replaceNegPictrueStrengthen(CvIntHaarFeatures* haar_features, MyCasca
 		//判断样本是否还存在
 		if (replace_postion >= cvbgdata->count)
 		{
-			return NEGISOVER;
+			replace_postion = 0;
+			//return NEGISOVER;
 		}
 
 		tempMat = transMat(tempMat, cvbgdata->filename[replace_postion]);
@@ -1415,6 +1416,7 @@ void icvBoost(int maxweaksplits, int stage_all, CvIntHaarFeatures* haarFeatures,
 	char fileName[100];
 	char idxName[100];
 	MyCascadeClassifier cascadeClassifier;  //级联分类器
+	cascadeClassifier.size = mysize;
 	ifstream istream;
 	ifstream idxstream;
 	string str;
@@ -1455,18 +1457,22 @@ void icvBoost(int maxweaksplits, int stage_all, CvIntHaarFeatures* haarFeatures,
 		{
 			//收集tp，fp样本,也就是替换tn，fn样本
 			printf("样本替换\n");
+			pos_next = 0;
+			neg_next = 0;
 			for (int sss = 0;sss < sampleNumber;sss++)
 			{
-				if ((predit_result[sss] == 0) && (haarTrainingData->cls.data.fl[sss] == 1.0))  //fn
+				//if ((predit_result[sss] == 0) && (haarTrainingData->cls.data.fl[sss] == 1.0))  //fn
+				if (haarTrainingData->cls.data.fl[sss] == 1.0)  //fn
 				{
 					if (pos_next >= cvposdata->count)
 					{
-						printf("正样本已经用完\n");
-						delete[]vector_feat;
-						delete[]eval;
-						delete[]predit_result;
-						delete[]idx;
-						return;
+						pos_next = 0;
+						printf("正样本已经用完，开始下一轮\n");
+					//	delete[]vector_feat;
+					//	delete[]eval;
+					//	delete[]predit_result;
+					//	delete[]idx;
+					//	return;
 					}
 					
 					int res = replacePosPictrueStrengthen(haarFeatures, cascadeClassifier, haarTrainingData, sss, pos_next, mysize);
@@ -1476,17 +1482,19 @@ void icvBoost(int maxweaksplits, int stage_all, CvIntHaarFeatures* haarFeatures,
 					
 				//	pos_next++;
 				}
-				else if ((predit_result[sss] == 0.0) && (haarTrainingData->cls.data.fl[sss] == 0.0))
+				//else if ((predit_result[sss] == 0.0) && (haarTrainingData->cls.data.fl[sss] == 0.0))
+				else if (haarTrainingData->cls.data.fl[sss] == 0.0)
 				{
 
 					if (neg_next >= cvbgdata->count)
 					{
-						printf("负样本已经用完\n");
-						delete[]vector_feat;
-						delete[]eval;
-						delete[]predit_result;
-						delete[]idx;
-						return;
+						neg_next = 0;
+						printf("负样本已经用完,下一轮开始\n");
+					//	delete[]vector_feat;
+					//	delete[]eval;
+					//	delete[]predit_result;
+					//	delete[]idx;
+					//	return;
 					}
 					int res = replaceNegPictrueStrengthen(haarFeatures, cascadeClassifier, haarTrainingData, sss, neg_next, mysize);
 					neg_next++;
@@ -1497,6 +1505,7 @@ void icvBoost(int maxweaksplits, int stage_all, CvIntHaarFeatures* haarFeatures,
 				}
 
 			}
+			cout << "正样本消耗:" << pos_next << ",负样本消耗:" << neg_next << endl;
 			//计算当前样本特征值
 			printf("特征计算\n");
 			icvPrecalculate(stage, num_pos + num_neg, haarTrainingData, haarFeatures, numprecalculated, SAVE_FEATURE_FILE, featdirname);
@@ -1736,7 +1745,7 @@ void icvBoost(int maxweaksplits, int stage_all, CvIntHaarFeatures* haarFeatures,
 		tempStrongClassifier.threshold = thresold;
 		cascadeClassifier.StrongClassifier.push_back(tempStrongClassifier);
 		cout << "thresold:" << thresold << ",falsealarms:" << current_falsealarms << ",feature_num:" << featurenumber << endl;
-		cout << "正样本消耗:" << pos_next << ",负样本消耗:" << neg_next << endl;
+		
 		//保存成xml文件
 		saveXML(haarFeatures, stage, strongClassifier, dirname, thresold);
 		stage++;
